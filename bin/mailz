@@ -67,3 +67,36 @@ for (@parts) {
 }
 
 $email->send();
+
+__END__
+
+=head1 Usage
+
+    mailcat -c mail_config.toml mail_body.txt
+
+    mailcat -c mail_config.toml mail_body.txt mail_attachment_*.jpg
+
+    some_program_output | mailcat -c mail_config.toml
+
+=head1 Description
+
+mailcat acts like cat, but delivers to a mail destination instead of STDOUT.
+
+It requires a C<-c> argument pointing to a TOML format config file with these
+key/values settings.
+
+    [header]
+    to = "smith@example.com"
+    from = "alice@example.com"
+    subject = "Blah blah blah, hoge hoge hoge."
+
+    [smtp]
+    host = "smtp.example.com"
+    ssl = 1
+    sasl_username = "alice"
+    sasl_password = "alices3cretpassw0rdz"
+
+The stuff to be mailed at are passed with command arguments, or via STDIN.
+STDIN are assumed to be UTF-8 encoded texts. Binary files like images should
+be passed by arguments.
+
