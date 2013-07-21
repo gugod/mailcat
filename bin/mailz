@@ -1,0 +1,70 @@
+#!/usr/bin/env perl
+use v5.14;
+use strict;
+
+use Email::Stuffer;
+use Email::Sender::Transport::SMTP;
+
+use TOML;
+use Getopt::Std qw(getopts);
+use IO::All;
+
+my %opts;
+getopts("c:", \%opts);
+die "-c requise a valid TOML file\n" unless -f "$opts{c}";
+
+my ($config, $error) = from_toml( io($opts{c})->utf8->all );
+
+if ($error) {
+    die "Error parsing TOML: $error";
+}
+
+my $stuff = Email::Stuffer->new;
+
+$stuff->from( $config->{header}{from} );
+$stuff->to(   $config->{header}{to}   );
+
+if (exists $config->{smtp}) {
+    $stuff->transport("SMTP", $config->{smtp});
+}
+
+$stuff->text_body();
+
+my $body;
+
+if (@ARGV) {
+    for my $file (@ARGV) {
+        if (-f $file) {
+            if (-T $file) {
+                $body .= io($file)->utf8->all;
+                say STDERR "Read mail body from $file";
+            }
+            else {
+                $stuff->attach_file($file);
+                say STDERR "Attach file $file";
+            }
+        }
+    }
+}
+
+if (!$body && -p STDIN) {
+    say STDERR "No mail body. Attemp to read from STDIN";
+    local $/ = undef;
+    $body .= <STDIN>;
+}
+
+if ($body) {
+    $stuff->text_body($body);
+}
+
+$stuff->subject("MAILZ");
+
+if ($body || @ARGV) {
+    say STDERR "Sending";
+    # say $stuff->as_string;
+
+    $stuff->send_or_die;
+}
+else {
+    die "Nothing to send?"
+}
