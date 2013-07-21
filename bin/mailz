@@ -4,7 +4,6 @@ use strict;
 
 use Email::Stuffer;
 use Email::Sender::Transport::SMTP;
-
 use TOML;
 use Getopt::Std qw(getopts);
 use IO::All;
@@ -16,55 +15,55 @@ die "-c requise a valid TOML file\n" unless -f "$opts{c}";
 my ($config, $error) = from_toml( io($opts{c})->utf8->all );
 
 if ($error) {
-    die "Error parsing TOML: $error";
+    die "Error parsing TOML: $error\n";
 }
 
-my $stuff = Email::Stuffer->new;
-
-$stuff->from( $config->{header}{from} );
-$stuff->to(   $config->{header}{to}   );
-
-if (exists $config->{smtp}) {
-    $stuff->transport("SMTP", $config->{smtp});
+unless ($config->{header}{from} && $config->{header}{to} && $config->{header}{subject}) {
+    die "Missing values in config. header.{from,to,subject} are all required.\n";
 }
 
-$stuff->text_body();
-
-my $body;
-
+my @parts;
+my $body = "";
 if (@ARGV) {
     for my $file (@ARGV) {
         if (-f $file) {
             if (-T $file) {
                 $body .= io($file)->utf8->all;
-                say STDERR "Read mail body from $file";
             }
             else {
-                $stuff->attach_file($file);
-                say STDERR "Attach file $file";
+                push @parts, { file => $file };
             }
         }
     }
 }
 
 if (!$body && -p STDIN) {
-    say STDERR "No mail body. Attemp to read from STDIN";
-    local $/ = undef;
-    $body .= <STDIN>;
+    $body .= io('-')->utf8->all;
 }
 
 if ($body) {
-    $stuff->text_body($body);
+    unshift @parts, { text => $body }
 }
 
-$stuff->subject("MAILZ");
+die "Nothing to send?" unless @parts;
 
-if ($body || @ARGV) {
-    say STDERR "Sending";
-    # say $stuff->as_string;
+my $email = Email::Stuffer->new;
 
-    $stuff->send_or_die;
+if (exists $config->{smtp}) {
+    $email->transport("SMTP", $config->{smtp});
 }
-else {
-    die "Nothing to send?"
+
+$email->subject( $config->{header}{subject} );
+$email->from( $config->{header}{from} );
+$email->to( $config->{header}{to} );
+
+for (@parts) {
+    if ($_->{text}) {
+        $email->text_body($_->{text});
+    }
+    else {
+        $email->attach_file($_->{file});
+    }
 }
+
+$email->send();
