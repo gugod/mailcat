@@ -7,9 +7,15 @@ use Email::Sender::Transport::SMTP;
 use TOML;
 use Getopt::Std qw(getopts);
 use IO::All;
+use Pod::Usage ();
 
 my %opts;
-getopts("c:", \%opts);
+getopts("hc:", \%opts);
+
+if($opts{h}) {
+    Pod::Usage::pod2usage( -verbose => 2, -noperldoc => 1 );
+}
+
 die "-c requise a valid TOML file\n" unless -f "$opts{c}";
 
 my ($config, $error) = from_toml( io($opts{c})->utf8->all );
@@ -38,7 +44,11 @@ if (@ARGV) {
 }
 
 if (!$body && -p STDIN) {
-    $body .= io('-')->utf8->all;
+    $body = io('-')->utf8->all;
+}
+
+if (!$body && !@ARGV) {
+    $body = io('-')->utf8->all;
 }
 
 if ($body) {
@@ -70,13 +80,25 @@ $email->send();
 
 __END__
 
-=head1 Usage
 
+=head1 NAME
+
+mailcat -- mail delivery program that acts like cat.
+
+=head1 USAGE
+
+    # Mail text files with attachments
     mailcat -c mail_config.toml mail_body.txt
-
     mailcat -c mail_config.toml mail_body.txt mail_attachment_*.jpg
 
+    # Mail text from stdin pipe
     some_program_output | mailcat -c mail_config.toml
+
+    # Mail text from interactive stdin
+    mailcat -c mail_config.toml
+    SOME THING TO SAY
+    ...
+    ^D
 
 =head1 Description
 
@@ -96,7 +118,32 @@ key/values settings.
     sasl_username = "alice"
     sasl_password = "alices3cretpassw0rdz"
 
+The C<header> section is required, but the C<smtp> section is optional.
+By default the program uses C<sendmail>.
+
 The stuff to be mailed at are passed with command arguments, or via STDIN.
 STDIN are assumed to be UTF-8 encoded texts. Binary files like images should
 be passed by arguments.
 
+mailcat takes STDIN interactively only when no arguments is passed.
+
+=head1 SEE ALSO
+
+The perl module L<Email::Stuffer>, where everything happens. This program is
+merely a small wrapper around that module.
+
+Perl module L<TOML> and L<https://github.com/mojombo/toml> for the description of TOML language.
+
+
+=head1 AUTHORS
+
+Kang-min Liu C<gugod@gugod.org>
+
+=head1 CC0 1.0 Universal
+
+To the extent possible under law, Kang-min Liu has waived all copyright and
+related or neighboring rights to L<mailcat>.
+
+This work is published from: Netherlands.
+
+L<http://creativecommons.org/publicdomain/zero/1.0>
