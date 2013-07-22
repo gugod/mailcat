@@ -174,13 +174,16 @@ the need for repeatitive input of "-c config.toml" argument:
 The content of C<MAILCAT_OPT> variable is prepend to the argument list in the
 beginning of the program.
 
+=head1 Dependencies
+
+IO::All Email::Stuffer MIME::Base64 Authen::SASL Net::SMTP
+
 =head1 SEE ALSO
 
 The perl module L<Email::Stuffer>, where everything happens. This program is
 merely a small wrapper around that module.
 
 Perl module L<TOML> and L<https://github.com/mojombo/toml> for the description of TOML language.
-
 
 =head1 AUTHORS
 
