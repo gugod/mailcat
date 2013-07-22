@@ -1,0 +1,88 @@
+NAME
+    mailcat -- mail delivery program that acts like cat.
+
+USAGE
+        mailcat -c config.toml [-hn] [...]
+
+          -h Display this help message
+          -c config.toml
+          -n print, instead of sending the mail.
+
+Examples
+    Mail text files with attachments:
+
+        mailcat -c config.toml mail_body.txt
+        mailcat -c config.toml mail_body.txt mail_attachment_*.jpg
+
+    Mail text from stdin pipe:
+
+        some_program_output | mailcat -c config.toml
+
+    Mail text from interactive stdin:
+
+        mailcat -c config.toml
+        SOME THING TO SAY
+        ...
+        ^D
+
+    Mail the concatenated text from STDIN and a text file:
+
+        mailcat -c config.toml - other_text.txt
+
+Description
+    mailcat acts like cat, but delivers to a mail destination instead of
+    STDOUT.
+
+    It requires a "-c" argument pointing to a TOML format config file with
+    these key/values settings.
+
+        [header]
+        to = "smith@example.com"
+        from = "alice@example.com"
+        subject = "Blah blah blah, hoge hoge hoge."
+
+        [smtp]
+        host = "smtp.example.com"
+        ssl = 1
+        sasl_username = "alice"
+        sasl_password = "alices3cretpassw0rdz"
+
+    The "header" section is required, but the "smtp" section is optional. By
+    default the program uses "sendmail".
+
+    The stuff to be mailed at are passed with command arguments, or via
+    STDIN. STDIN are assumed to be UTF-8 encoded texts. Binary files like
+    images must be passed by arguments.
+
+    mailcat takes STDIN interactively only when no arguments is passed, or
+    when "-" is used in one of the arrugments. Just like "cat".
+
+    An special environment variable "MAILCAT_OPT" can be defined to
+    accomodate the need for repeatitive input of "-c config.toml" argument:
+
+        export MAILCAT_OPT="-c /etc/mailcat.toml"
+
+    The content of "MAILCAT_OPT" variable is prepend to the argument list in
+    the beginning of the program.
+
+Dependencies
+    IO::All Email::Stuffer MIME::Base64 Authen::SASL Net::SMTP
+
+SEE ALSO
+    The perl module Email::Stuffer, where everything happens. This program
+    is merely a small wrapper around that module.
+
+    Perl module TOML and <https://github.com/mojombo/toml> for the
+    description of TOML language.
+
+AUTHORS
+    Kang-min Liu "gugod@gugod.org"
+
+CC0 1.0 Universal
+    To the extent possible under law, Kang-min Liu has waived all copyright
+    and related or neighboring rights to mailcat.
+
+    This work is published from: Netherlands.
+
+    <http://creativecommons.org/publicdomain/zero/1.0>
+
