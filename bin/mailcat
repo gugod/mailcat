@@ -11,6 +11,8 @@ use Email::Sender::Transport::SMTP;
 use TOML;
 use IO::All;
 
+unshift @ARGV, split(" ", $ENV{MAILCAT_OPT}) if $ENV{MAILCAT_OPT};
+
 my %opts;
 
 $opts{h} = 1 if !@ARGV;
@@ -164,7 +166,13 @@ be passed by arguments.
 mailcat takes STDIN interactively only when no arguments is passed, or when
 C<-> is used in one of the arrugments. Just like C<cat>.
 
-For example
+An special environment variable C<MAILCAT_OPT> can be defined to accomodate
+the need for repeatitive input of "-c config.toml" argument:
+
+    export MAILCAT_OPT="-c /etc/mailcat.toml"
+
+The content of C<MAILCAT_OPT> variable is prepend to the argument list in the
+beginning of the program.
 
 =head1 SEE ALSO
 
