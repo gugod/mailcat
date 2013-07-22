@@ -2,18 +2,27 @@
 use v5.14;
 use strict;
 
+# Core modules
+use Getopt::Std qw(getopts);
+
+# Non-core modules
 use Email::Stuffer;
 use Email::Sender::Transport::SMTP;
 use TOML;
-use Getopt::Std qw(getopts);
 use IO::All;
-use Pod::Usage ();
 
 my %opts;
-getopts("hc:", \%opts);
 
-if($opts{h}) {
-    Pod::Usage::pod2usage( -verbose => 2, -noperldoc => 1 );
+$opts{h} = 1 if !@ARGV;
+
+getopts("nhc:", \%opts);
+
+if ($opts{h}) {
+    require IO::Pager;
+    require Pod::Usage;
+    my $token = IO::Pager->new(*STDOUT);
+
+    Pod::Usage::pod2usage( -verbose => 2, -noperldoc => 1, -output => \*STDOUT );
 }
 
 die "-c requise a valid TOML file\n" unless -f "$opts{c}";
@@ -30,6 +39,14 @@ unless ($config->{header}{from} && $config->{header}{to} && $config->{header}{su
 
 my @parts;
 my $body = "";
+
+my $body_from_pipe;
+
+if (-p STDIN) {
+    $body = io('-')->utf8->all;
+    $body_from_pipe = 1;
+}
+
 if (@ARGV) {
     for my $file (@ARGV) {
         if (-f $file) {
@@ -40,14 +57,13 @@ if (@ARGV) {
                 push @parts, { file => $file };
             }
         }
+        elsif ($file eq "-" && !$body_from_pipe) {
+            $body .= io("-")->utf8->all;
+        }
     }
 }
 
-if (!$body && -p STDIN) {
-    $body = io('-')->utf8->all;
-}
-
-if (!$body && !@ARGV) {
+if (!$body && (!@ARGV || -p STDIN)) {
     $body = io('-')->utf8->all;
 }
 
@@ -76,7 +92,12 @@ for (@parts) {
     }
 }
 
-$email->send();
+if ($opts{n}) {
+    say $email->as_string;
+}
+else {
+    $email->send();
+}
 
 __END__
 
@@ -87,18 +108,33 @@ mailcat -- mail delivery program that acts like cat.
 
 =head1 USAGE
 
-    # Mail text files with attachments
-    mailcat -c mail_config.toml mail_body.txt
-    mailcat -c mail_config.toml mail_body.txt mail_attachment_*.jpg
+    mailcat -c config.toml [-hn] [...]
 
-    # Mail text from stdin pipe
-    some_program_output | mailcat -c mail_config.toml
+      -h Display this help message
+      -c config.toml
+      -n print, instead of sending the mail.
 
-    # Mail text from interactive stdin
-    mailcat -c mail_config.toml
+=head1 Examples
+
+Mail text files with attachments:
+
+    mailcat -c config.toml mail_body.txt
+    mailcat -c config.toml mail_body.txt mail_attachment_*.jpg
+
+Mail text from stdin pipe:
+
+    some_program_output | mailcat -c config.toml
+
+Mail text from interactive stdin:
+
+    mailcat -c config.toml
     SOME THING TO SAY
     ...
     ^D
+
+Mail the concatenated text from STDIN and a text file:
+
+    mailcat -c config.toml - other_text.txt
 
 =head1 Description
 
@@ -122,10 +158,13 @@ The C<header> section is required, but the C<smtp> section is optional.
 By default the program uses C<sendmail>.
 
 The stuff to be mailed at are passed with command arguments, or via STDIN.
-STDIN are assumed to be UTF-8 encoded texts. Binary files like images should
+STDIN are assumed to be UTF-8 encoded texts. Binary files like images must
 be passed by arguments.
 
-mailcat takes STDIN interactively only when no arguments is passed.
+mailcat takes STDIN interactively only when no arguments is passed, or when
+C<-> is used in one of the arrugments. Just like C<cat>.
+
+For example
 
 =head1 SEE ALSO
 
