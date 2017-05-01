@@ -17,7 +17,7 @@ my %opts;
 
 $opts{h} = 1 if !@ARGV;
 
-getopts("nhc:", \%opts);
+getopts("s:nhc:", \%opts);
 
 if ($opts{h}) {
     require IO::Pager;
@@ -81,7 +81,12 @@ if (exists $config->{smtp}) {
     $email->transport("SMTP", $config->{smtp});
 }
 
-$email->subject( $config->{header}{subject} );
+if ($opts{s}) {
+    $email->subject( $opts{s} );
+} else {
+    $email->subject( $config->{header}{subject} );
+}
+
 $email->from( $config->{header}{from} );
 $email->to( $config->{header}{to} );
 
