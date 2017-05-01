@@ -1,3 +1,4 @@
+requires 'TOML'           => 0;
 requires 'IO::All'        => 0;
 requires 'Email::Stuffer' => 0;
 requires 'MIME::Base64'   => 0;
